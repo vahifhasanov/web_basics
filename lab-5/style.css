@@ -1,0 +1,84 @@
+/* 1. додайте клас до h1 і зробіть весь текст для класу заглавними літерами */
+.title {
+    text-transform: uppercase;
+}
+
+/* 2. придумайте назву класа для списку цілей і встановіть колір шрифту червоним у шістнадцятковому форматі */
+.goals {
+    color: #ff0000;
+}
+
+/* 3. пунктам списку цілей за класом дайте колір заднього фону yellow і нахилений шрифт */
+.goals .list__item {
+    background-color: yellow;
+    font-style: italic;
+}
+
+/* 4. для усіх впорядкованих списків задайте рамку 1px solid red */
+ol {
+    border: 1px solid red;
+}
+
+/* 5. задайте id для заголовку h1 і встановіть колір green */
+#main-title {
+    color: green;
+}
+
+/* 6. для всіх посилань на PDF-документи */
+a[href$=".pdf"] {
+    color: green;
+    font-style: italic;
+}
+
+/* 7. для всіх посилань — violet і без підкреслення */
+a {
+    color: violet;
+    text-decoration: none;
+}
+
+
+/* 8. всі вкладені списки другого рівня */
+ul ul {
+    text-transform: uppercase;
+}
+
+/* 9. посилання всередині абзаців */
+p a {
+    color: magenta;
+    background-color: mistyrose;
+}
+
+/* 10. клас bold */
+.bold {
+    font-weight: bold;
+}
+
+/* 11. всі li.bold */
+li.bold {
+    text-transform: uppercase;
+}
+
+/* 12. другий абзац і передостанній */
+p:nth-of-type(2),
+p:nth-last-of-type(2) {
+    text-align: right;
+    border: 2px solid blue;
+    font-size: 20px;
+}
+
+/* 13. колір h1 червоний — !important через конфлікт з id */
+h1 {
+    color: red !important;
+}
+
+/* 14. box-sizing для всіх */
+* {
+    box-sizing: border-box;
+}
+
+/* 15. фон цілей лише по довжині тексту */
+.goals .list__item span {
+    background-color: yellow;
+    font-style: italic;
+}
+
