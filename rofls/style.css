@@ -1,0 +1,182 @@
+/* Подключение шрифта Fontspring DEMO "Quinoa Unicase Semibold" через @font-face */
+@font-face {
+    font-family: 'Quinoa Unicase Semibold';
+    src: url('https://db.onlinewebfonts.com/t/a6c51fe79a48b58d875458a674312b6c.eot');
+    src: url('https://db.onlinewebfonts.com/t/a6c51fe79a48b58d875458a674312b6c.eot?#iefix') format('embedded-opentype'),
+    url('https://db.onlinewebfonts.com/t/a6c51fe79a48b58d875458a674312b6c.woff2') format('woff2'),
+    url('https://db.onlinewebfonts.com/t/a6c51fe79a48b58d875458a674312b6c.woff') format('woff'),
+    url('https://db.onlinewebfonts.com/t/a6c51fe79a48b58d875458a674312b6c.ttf') format('truetype');
+    /* SVG-формат опущен для краткости */
+    font-weight: normal;
+    font-style: normal;
+}
+
+/* Глобальные базовые стили */
+html, body {
+    margin: 0;
+    padding: 0;
+    height: 100%;
+    font-family: Arial, sans-serif; /* основной шрифт для текста */
+    color: #333;
+}
+
+body {
+    /* Фон страницы с двумя радиальными градиентами в углах */
+    background: radial-gradient(circle at bottom left,
+    rgba(255, 206, 212, 1) 0%,
+    rgba(255, 206, 212, 0) 70%),
+    radial-gradient(circle at top right,
+            rgba(214, 235, 255, 1) 0%,
+            rgba(214, 235, 255, 0) 70%);
+    background-color: #ffffff; /* запасной цвет фона */
+    background-repeat: no-repeat;
+}
+
+/* Стили верхней панели (Header) */
+header {
+    background: rgba(255, 255, 255, 0.8); /* полупрозрачный белый фон */
+    border-bottom: 1px solid #fff;       /* белая граница снизу */
+    width: 100%;
+}
+
+header .container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 15px 20px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+/* Логотип / название сайта */
+.logo {
+    font-family: 'Quinoa Unicase Semibold', sans-serif;
+    font-size: 1.5em;
+    text-decoration: none;
+    color: #333;
+}
+
+/* Навигационные ссылки в header */
+header nav a {
+    margin-left: 20px;
+    text-decoration: none;
+    color: #333;
+    font-family: 'Quinoa Unicase Semibold', sans-serif;
+    font-size: 1em;
+    transition: color 0.3s;
+}
+header nav a:hover {
+    color: #000;
+}
+
+/* Основной hero-раздел */
+main {
+    position: relative;
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding: 0 20px;
+    box-sizing: border-box;
+}
+
+.hero-content {
+    max-width: 600px;
+    z-index: 1; /* над декоративными изображениями */
+}
+
+.hero-content h1 {
+    font-family: 'Quinoa Unicase Semibold', sans-serif;
+    font-size: 2.5em;
+    margin: 0 0 0.5em;
+}
+
+.hero-content .tagline {
+    font-size: 1.1em;
+    color: #555;
+    margin-bottom: 1.5em;
+}
+
+/* Стили кнопок в hero-разделе */
+.buttons {
+    display: flex;
+    gap: 15px;
+    flex-wrap: wrap;
+    justify-content: center;
+}
+
+.btn {
+    font-family: 'Quinoa Unicase Semibold', sans-serif;
+    text-decoration: none;
+    padding: 12px 25px;
+    border: 2px solid #333;
+    border-radius: 5px;
+    font-size: 1em;
+    display: inline-block;
+    transition: background-color 0.3s, color 0.3s;
+}
+
+.primary-btn {
+    background-color: #337ab7;
+    border-color: #337ab7;
+    color: #fff;
+}
+.primary-btn:hover {
+    background-color: #286090;
+    border-color: #286090;
+}
+
+.secondary-btn {
+    background-color: transparent;
+    color: #333;
+}
+.secondary-btn:hover {
+    background-color: rgba(0, 0, 0, 0.05);
+}
+
+/* Декоративные изображения (ноутбук и ручка) */
+.decor-notebook, .decor-pen {
+    position: absolute;
+    pointer-events: none; /* неактивны для курсора */
+    z-index: 0;
+}
+
+.decor-notebook {
+    bottom: 0;
+    left: 0;
+    width: 30vw;
+    max-width: 400px;
+}
+
+.decor-pen {
+    top: 0;
+    right: 0;
+    width: 20vw;
+    max-width: 250px;
+    filter: blur(8px);
+}
+
+/* Адаптивные стили для узких экранов */
+@media (max-width: 600px) {
+    header .container {
+        padding: 10px;
+    }
+    header nav a {
+        margin-left: 15px;
+        font-size: 0.9em;
+    }
+    .hero-content h1 {
+        font-size: 2em;
+    }
+    .hero-content .tagline {
+        font-size: 1em;
+    }
+    .buttons {
+        flex-direction: column;
+        gap: 10px;
+    }
+    .decor-notebook, .decor-pen {
+        display: none; /* скрыть декоративные изображения на мобильных */
+    }
+}

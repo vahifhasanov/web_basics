@@ -1,0 +1,536 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>Neon Flight: Overdrive</title>
+    <style>
+        :root {
+            --neon-blue: #0ff;
+            --neon-pink: #f0f;
+            --neon-yellow: #ff0;
+            --neon-red: #f00;
+            --bg-color: #0d0d2b;
+        }
+        body {
+            margin: 0;
+            overflow: hidden;
+            background: var(--bg-color);
+            font-family: 'Courier New', Courier, monospace;
+            color: #fff;
+            user-select: none;
+        }
+        canvas { display: block; }
+
+        /* UI Elements */
+        #ui, #shopScreen, #gameOverScreen {
+            position: absolute;
+            padding: 20px;
+            z-index: 10;
+        }
+        #ui {
+            top: 10px; left: 10px;
+            pointer-events: none;
+        }
+        h1 { margin: 0 0 10px 0; text-shadow: 0 0 10px var(--neon-blue); }
+        h2 { text-shadow: 0 0 10px var(--neon-pink); }
+        p { font-size: 18px; margin: 5px 0; }
+        .stat-box { background: rgba(0,0,0,0.5); padding: 10px; border-radius: 5px; border: 1px solid var(--neon-blue); display: inline-block; margin-right: 10px;}
+
+        /* Screens (Game Over & Shop) */
+        #gameOverScreen, #shopScreen {
+            top: 50%; left: 50%;
+            transform: translate(-50%, -50%);
+            text-align: center;
+            background: rgba(0, 0, 0, 0.9);
+            border: 3px solid var(--neon-pink);
+            box-shadow: 0 0 30px var(--neon-pink);
+            border-radius: 15px;
+            min-width: 400px;
+            display: none; /* Скрыты по умолчанию */
+        }
+
+        /* Buttons & Shop Items */
+        button {
+            background: var(--neon-pink);
+            color: #fff;
+            border: none; padding: 12px 24px;
+            font-size: 20px; cursor: pointer;
+            font-family: inherit; font-weight: bold;
+            margin: 10px;
+            box-shadow: 0 0 15px var(--neon-pink);
+            transition: 0.3s; clip-path: polygon(10% 0, 100% 0, 90% 100%, 0% 100%);
+        }
+        button:hover:not(:disabled) { background: #fff; color: var(--neon-pink); transform: scale(1.05); }
+        button:disabled { opacity: 0.5; cursor: not-allowed; filter: grayscale(1);}
+        button.play-btn { background: var(--neon-blue); box-shadow: 0 0 15px var(--neon-blue); color: #000; clip-path: none; border-radius: 5px;}
+        button.play-btn:hover { background: #fff; color: var(--neon-blue);}
+
+        .shop-item {
+            display: flex; justify-content: space-between; align-items: center;
+            background: rgba(255,255,255,0.1); margin: 10px 0; padding: 10px 20px;
+            border-radius: 5px; border-left: 4px solid var(--neon-yellow);
+        }
+        .shop-info { text-align: left; }
+        .shop-info h3 { margin: 0; color: var(--neon-yellow); }
+        .shop-info small { opacity: 0.7; }
+    </style>
+</head>
+<body>
+
+<div id="ui">
+    <h1>NEON OVERDRIVE</h1>
+    <div class="stat-box">Счет: <span id="scoreVal">0</span></div>
+    <div class="stat-box" style="border-color: var(--neon-yellow); color: var(--neon-yellow);">Монеты: <span id="coinsRunVal">0</span></div>
+    <div id="shieldIndicator" class="stat-box" style="display:none; border-color: var(--neon-blue); color: var(--neon-blue);">🛡️ ЩИТ АКТИВЕН</div>
+</div>
+
+<div id="gameOverScreen">
+    <h1 style="color: var(--neon-red); text-shadow: 0 0 20px var(--neon-red);">СИСТЕМА ПОВРЕЖДЕНА</h1>
+    <p>Счет за забег: <span id="finalScore">0</span></p>
+    <p style="color: var(--neon-yellow);">Собрано монет: +<span id="finalCoins">0</span></p>
+    <br>
+    <button class="play-btn" onclick="openShop()">В МАГАЗИН / РЕСТАРТ</button>
+</div>
+
+<div id="shopScreen">
+    <h2>МАГАЗИН УЛУЧШЕНИЙ</h2>
+    <p>Всего монет: <span id="totalCoinsVal" style="color: var(--neon-yellow); font-weight: bold;">0</span></p>
+    <hr style="border-color: var(--neon-pink); opacity: 0.3;">
+
+    <div class="shop-item">
+        <div class="shop-info">
+            <h3>Магнит (Ур. <span id="magnetLvl">1</span>)</h3>
+            <small>Притягивает монеты. Цена: <span id="magnetCost">50</span></small>
+        </div>
+        <button id="buyMagnetBtn" onclick="buyUpgrade('magnet')">КУПИТЬ</button>
+    </div>
+
+    <div class="shop-item">
+        <div class="shop-info">
+            <h3>Множитель очков (Ур. <span id="multiplierLvl">1</span>)</h3>
+            <small>Больше очков за монеты. Цена: <span id="multiplierCost">100</span></small>
+        </div>
+        <button id="buyMultiplierBtn" onclick="buyUpgrade('multiplier')">КУПИТЬ</button>
+    </div>
+
+    <div class="shop-item">
+        <div class="shop-info">
+            <h3>Энергощит (Одноразовый)</h3>
+            <small>Спасает от 1 удара. Цена: 150</small>
+        </div>
+        <button id="buyShieldBtn" onclick="buyShield()">КУПИТЬ</button>
+    </div>
+
+    <hr style="border-color: var(--neon-pink); opacity: 0.3;">
+    <button class="play-btn" style="width: 80%; font-size: 24px;" onclick="startGame()">В ПОЛЕТ!</button>
+</div>
+
+<canvas id="gameCanvas"></canvas>
+
+<script>
+    // --- ГЛОБАЛЬНОЕ СОСТОЯНИЕ И СОХРАНЕНИЕ ---
+    let gameState = {
+        totalCoins: 0,
+        upgrades: {
+            magnetLvl: 1,
+            multiplierLvl: 1,
+            hasShield: false
+        }
+    };
+
+    // Загрузка данных
+    const savedData = localStorage.getItem('neonFlightSave');
+    if (savedData) {
+        gameState = JSON.parse(savedData);
+    }
+
+    function saveData() {
+        localStorage.setItem('neonFlightSave', JSON.stringify(gameState));
+        updateShopUI();
+    }
+
+    // Цены улучшений (формула: базовая цена * уровень)
+    const getCost = (type) => type === 'magnet' ? 50 * gameState.upgrades.magnetLvl : 100 * gameState.upgrades.multiplierLvl;
+    const shieldCost = 150;
+
+    // --- ИГРОВАЯ ЛОГИКА ---
+    const canvas = document.getElementById('gameCanvas');
+    const ctx = canvas.getContext('2d');
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+
+    // Переменные игровой сессии
+    let frames = 0;
+    let score = 0;
+    let coinsCollectedInRun = 0;
+    let gameSpeed = 3;
+    let isGameOver = false;
+    let isGameRunning = false;
+    let animationId;
+
+    // Управление
+    let isFlying = false;
+    ['mousedown', 'touchstart'].forEach(evt =>
+        document.addEventListener(evt, (e) => {
+            if(isGameRunning && !isGameOver) { e.preventDefault(); isFlying = true; }
+        }, {passive: false})
+    );
+    ['mouseup', 'touchend'].forEach(evt =>
+        document.addEventListener(evt, (e) => {
+            if(isGameRunning && !isGameOver) { e.preventDefault(); isFlying = false; }
+        })
+    );
+    document.addEventListener('keydown', (e) => { if (e.code === 'Space') isFlying = true; });
+    document.addEventListener('keyup', (e) => { if (e.code === 'Space') isFlying = false; });
+
+    // Игрок (Физика осталась прежней)
+    const player = {
+        x: 100, y: canvas.height / 2,
+        radius: 15, color: '#0ff',
+        dy: 0, gravity: 0.15, lift: -0.4, maxSpeed: 6,
+        draw() {
+            // Рисуем щит, если есть
+            if(gameState.upgrades.hasShield) {
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.radius + 5, 0, Math.PI * 2);
+                ctx.strokeStyle = '#0ff'; ctx.lineWidth = 2;
+                ctx.shadowBlur = 10; ctx.shadowColor = '#0ff';
+                ctx.stroke(); ctx.shadowBlur = 0;
+            }
+            // Рисуем шар
+            ctx.shadowBlur = 20; ctx.shadowColor = this.color;
+            ctx.fillStyle = this.color;
+            ctx.beginPath(); ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2); ctx.fill();
+            ctx.shadowBlur = 0;
+            ctx.fillStyle = 'white';
+            ctx.beginPath(); ctx.arc(this.x - 5, this.y - 5, 4, 0, Math.PI * 2); ctx.fill();
+        },
+        update() {
+            if (isFlying) this.dy += this.lift;
+            this.dy += this.gravity;
+            this.y += this.dy;
+            // Ограничение скорости
+            if (this.dy > this.maxSpeed) this.dy = this.maxSpeed;
+            if (this.dy < -this.maxSpeed) this.dy = -this.maxSpeed;
+            // Границы
+            if (this.y + this.radius > canvas.height) hitObstacle();
+            if (this.y - this.radius < 0) { this.y = this.radius; this.dy = 0; }
+        }
+    };
+
+    // Игровые объекты
+    let particles = [], obstacles = [], coins = [], enemies = [];
+
+    class Particle {
+        constructor(x, y, color, speedMult = 1) {
+            this.x = x; this.y = y;
+            this.size = Math.random() * 5 + 2;
+            this.color = color;
+            this.speedX = (Math.random() - 0.5) * speedMult;
+            this.speedY = (Math.random() - 0.5) * speedMult;
+            this.life = 100;
+        }
+        update() {
+            this.x -= gameSpeed * 0.5 + this.speedX;
+            this.y += this.speedY;
+            this.life -= 2; this.size *= 0.96;
+        }
+        draw() {
+            ctx.fillStyle = this.color;
+            ctx.globalAlpha = this.life / 100;
+            ctx.beginPath(); ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2); ctx.fill();
+            ctx.globalAlpha = 1;
+        }
+    }
+
+    // ВРАГИ (Дроны)
+    class Enemy {
+        constructor() {
+            this.x = canvas.width + 50;
+            this.y = Math.random() * canvas.height;
+            this.baseY = this.y;
+            this.radius = 12;
+            this.angle = Math.random() * Math.PI;
+            this.speed = gameSpeed * 1.5 + Math.random(); // Быстрее окружения
+        }
+        update() {
+            this.x -= this.speed;
+            this.angle += 0.05;
+            this.y = this.baseY + Math.sin(this.angle) * 80; // Полет волной
+
+            // Проверка столкновения
+            let dist = Math.hypot(player.x - this.x, player.y - this.y);
+            if (dist < player.radius + this.radius - 2) {
+                hitObstacle();
+                return true; // Hit occurred
+            }
+            return false;
+        }
+        draw() {
+            ctx.shadowBlur = 15; ctx.shadowColor = '#f00';
+            ctx.fillStyle = '#f00';
+            ctx.beginPath();
+            // Рисуем шипастую форму
+            for(let i = 0; i < 6; i++) {
+                let a = this.angle * 2 + i * (Math.PI/3);
+                let r = this.radius * (i % 2 === 0 ? 1.5 : 0.8);
+                ctx.lineTo(this.x + Math.cos(a) * r, this.y + Math.sin(a) * r);
+            }
+            ctx.fill(); ctx.shadowBlur = 0;
+        }
+    }
+
+    // ПРЕПЯТСТВИЯ (Разные типы)
+    class Obstacle {
+        constructor(x, y, w, h, type) {
+            this.x = x; this.y = y; this.w = w; this.h = h;
+            this.type = type || 'static'; // 'static', 'moving', 'blade'
+            this.color = '#f0f';
+            this.moveSpeedY = Math.random() > 0.5 ? 2 : -2;
+            this.angle = 0;
+        }
+        update() {
+            this.x -= gameSpeed;
+            if (this.type === 'moving') {
+                this.y += this.moveSpeedY;
+                if (this.y < -50 || this.y + this.h > canvas.height + 50) this.moveSpeedY *= -1;
+            } else if (this.type === 'blade') {
+                this.angle += 0.1;
+            }
+        }
+        draw() {
+            ctx.shadowBlur = 15; ctx.shadowColor = this.color;
+            ctx.fillStyle = this.color;
+            if (this.type !== 'blade') {
+                ctx.fillRect(this.x, this.y, this.w, this.h);
+            } else {
+                // Вращающееся лезвие
+                ctx.save();
+                ctx.translate(this.x + this.w/2, this.y + this.h/2);
+                ctx.rotate(this.angle);
+                ctx.fillRect(-this.w/2, -this.h/2, this.w, this.h);
+                ctx.fillRect(-this.h/2, -this.w/2, this.h, this.w); // Крестовина
+                ctx.restore();
+            }
+            ctx.shadowBlur = 0;
+        }
+        checkCollision(p) {
+            let margin = 5;
+            // Простая проверка прямоугольника для всех типов (для лезвия не совсем точно, но играбельно)
+            return (
+                p.x + p.radius - margin > this.x && p.x - p.radius + margin < this.x + this.w &&
+                p.y + p.radius - margin > this.y && p.y - p.radius + margin < this.y + this.h
+            );
+        }
+    }
+
+    // --- СПАВНЕРЫ ---
+    function spawnGameObjects() {
+        // Препятствия
+        if (frames % 180 === 0) {
+            let gap = 300;
+            let minH = 50;
+            let randomH = Math.random() * (canvas.height - gap - minH * 2) + minH;
+            // Шанс на появление особого препятствия
+            let type = Math.random() > 0.7 ? 'moving' : 'static';
+
+            obstacles.push(new Obstacle(canvas.width, 0, 50, randomH, type));
+            obstacles.push(new Obstacle(canvas.width, randomH + gap, 50, canvas.height - (randomH + gap), type));
+
+            // Лезвие посередине иногда
+            if (Math.random() > 0.8 && frames > 500) {
+                obstacles.push(new Obstacle(canvas.width + 25, randomH + gap/2 - 10, 100, 20, 'blade'));
+            }
+
+            // Монетка в проходе
+            coins.push({
+                x: canvas.width + 25, y: randomH + gap / 2,
+                radius: 12, collected: false, vy: 0, vx: 0
+            });
+        }
+        // Враги (появляются позже)
+        if (frames > 600 && frames % 250 === 0) {
+            enemies.push(new Enemy());
+        }
+    }
+
+    // --- ОБРАБОТКА СТОЛКНОВЕНИЯ ---
+    function hitObstacle() {
+        if (gameState.upgrades.hasShield) {
+            // Использовать щит
+            gameState.upgrades.hasShield = false;
+            document.getElementById('shieldIndicator').style.display = 'none';
+            // Эффект использования щита (взрыв и очистка экрана)
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            obstacles = []; enemies = []; // Уничтожить все угрозы
+            for(let i=0; i<30; i++) particles.push(new Particle(player.x, player.y, '#0ff', 10));
+        } else {
+            gameOver();
+        }
+    }
+
+    // --- ИГРОВОЙ ЦИКЛ ---
+    function animate() {
+        if (!isGameRunning) return;
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        frames++;
+        if (frames % 1000 === 0) gameSpeed += 0.3; // Постепенное ускорение
+
+        handleBackground();
+        spawnGameObjects();
+
+        // Обновление объектов
+        if (frames % 5 === 0) particles.push(new Particle(player.x - 10, player.y, '#0ff'));
+        particles.forEach((p, i) => { p.update(); p.draw(); if (p.life <= 0) particles.splice(i, 1); });
+
+        obstacles.forEach((obs, i) => {
+            obs.update(); obs.draw();
+            if (obs.checkCollision(player)) hitObstacle();
+            if (obs.x + obs.w < 0) { obstacles.splice(i, 1); i--; }
+        });
+
+        enemies.forEach((enemy, i) => {
+            if (enemy.update()) { // Returns true on hit
+                enemies.splice(i, 1); i--;
+            } else {
+                enemy.draw();
+                if (enemy.x < -50) { enemies.splice(i, 1); i--; }
+            }
+        });
+
+        coins.forEach((coin, i) => {
+            if (!coin.collected) {
+                // Магнит
+                let dist = Math.hypot(player.x - coin.x, player.y - coin.y);
+                let magnetRange = 50 + (gameState.upgrades.magnetLvl * 30);
+                if (dist < magnetRange) {
+                    let angle = Math.atan2(player.y - coin.y, player.x - coin.x);
+                    coin.vx += Math.cos(angle) * 1;
+                    coin.vy += Math.sin(angle) * 1;
+                    coin.x += coin.vx; coin.y += coin.vy;
+                } else {
+                    coin.x -= gameSpeed;
+                }
+
+                ctx.fillStyle = '#ff0'; ctx.shadowBlur = 15; ctx.shadowColor = '#ff0';
+                ctx.beginPath(); ctx.arc(coin.x, coin.y, coin.radius, 0, Math.PI*2); ctx.fill(); ctx.shadowBlur = 0;
+
+                // Сбор (учитываем радиус магнита для легкого сбора вблизи)
+                if (dist < player.radius + coin.radius + 10) {
+                    coin.collected = true;
+                    // Формула очков с множителем
+                    let points = 10 * gameState.upgrades.multiplierLvl;
+                    score += points;
+                    coinsCollectedInRun++;
+                    document.getElementById('scoreVal').innerText = score;
+                    document.getElementById('coinsRunVal').innerText = coinsCollectedInRun;
+                    for(let j=0; j<10; j++) particles.push(new Particle(coin.x, coin.y, '#ff0', 5));
+                }
+            }
+            if (coin.x < 0 && !coin.collected) { coins.splice(i, 1); i--; }
+        });
+
+        player.update();
+        if (!isGameOver) player.draw();
+
+        if (!isGameOver) animationId = requestAnimationFrame(animate);
+    }
+
+    function handleBackground() {
+        ctx.strokeStyle = 'rgba(0, 255, 255, 0.1)'; ctx.lineWidth = 1;
+        let offset = (frames * gameSpeed) % 80;
+        for (let y = 0; y < canvas.height; y += 80) {
+            ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(canvas.width, y); ctx.stroke();
+        }
+        for (let x = 0 - offset; x < canvas.width; x += 80) {
+            ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, canvas.height); ctx.stroke();
+        }
+    }
+
+    // --- УПРАВЛЕНИЕ СОСТОЯНИЯМИ ---
+    function gameOver() {
+        isGameOver = true;
+        isGameRunning = false;
+        // Сохраняем монеты
+        gameState.totalCoins += coinsCollectedInRun;
+        saveData();
+
+        document.getElementById('ui').style.display = 'none';
+        document.getElementById('gameOverScreen').style.display = 'block';
+        document.getElementById('finalScore').innerText = score;
+        document.getElementById('finalCoins').innerText = coinsCollectedInRun;
+    }
+
+    function openShop() {
+        document.getElementById('gameOverScreen').style.display = 'none';
+        document.getElementById('shopScreen').style.display = 'block';
+        updateShopUI();
+    }
+
+    function startGame() {
+        // Сброс
+        player.y = canvas.height / 2; player.dy = 0;
+        obstacles = []; coins = []; particles = []; enemies = [];
+        score = 0; coinsCollectedInRun = 0; frames = 0; gameSpeed = 3;
+        isGameOver = false; isGameRunning = true;
+
+        // UI
+        document.getElementById('shopScreen').style.display = 'none';
+        document.getElementById('ui').style.display = 'block';
+        document.getElementById('scoreVal').innerText = '0';
+        document.getElementById('coinsRunVal').innerText = '0';
+        document.getElementById('shieldIndicator').style.display = gameState.upgrades.hasShield ? 'inline-block' : 'none';
+
+        cancelAnimationFrame(animationId);
+        animate();
+    }
+
+    // --- ФУНКЦИИ МАГАЗИНА ---
+    function buyUpgrade(type) {
+        let cost = getCost(type);
+        if (gameState.totalCoins >= cost) {
+            gameState.totalCoins -= cost;
+            gameState.upgrades[type + 'Lvl']++;
+            saveData();
+        }
+    }
+
+    function buyShield() {
+        if (!gameState.upgrades.hasShield && gameState.totalCoins >= shieldCost) {
+            gameState.totalCoins -= shieldCost;
+            gameState.upgrades.hasShield = true;
+            saveData();
+        }
+    }
+
+    function updateShopUI() {
+        document.getElementById('totalCoinsVal').innerText = gameState.totalCoins;
+        // Магнит
+        document.getElementById('magnetLvl').innerText = gameState.upgrades.magnetLvl;
+        document.getElementById('magnetCost').innerText = getCost('magnet');
+        document.getElementById('buyMagnetBtn').disabled = gameState.totalCoins < getCost('magnet');
+        // Множитель
+        document.getElementById('multiplierLvl').innerText = gameState.upgrades.multiplierLvl;
+        document.getElementById('multiplierCost').innerText = getCost('multiplier');
+        document.getElementById('buyMultiplierBtn').disabled = gameState.totalCoins < getCost('multiplier');
+        // Щит
+        let shieldBtn = document.getElementById('buyShieldBtn');
+        if (gameState.upgrades.hasShield) {
+            shieldBtn.innerText = 'КУПЛЕНО'; shieldBtn.disabled = true;
+        } else {
+            shieldBtn.innerText = 'КУПИТЬ';
+            shieldBtn.disabled = gameState.totalCoins < shieldCost;
+        }
+    }
+
+    // --- ЗАПУСК ---
+    window.addEventListener('resize', () => {
+        canvas.width = window.innerWidth; canvas.height = window.innerHeight;
+    });
+    // При первой загрузке сразу показываем магазин
+    openShop();
+
+</script>
+</body>
+</html>
